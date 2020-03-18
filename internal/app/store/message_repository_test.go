@@ -57,7 +57,7 @@ func TestMessagesRepository_Find_When_2_EntriesExist(t *testing.T) {
 		_, _ = s.Messages().Create(&m)
 	}
 
-	messages, err := s.Messages().Find(5, 0)
+	messages, err := s.Messages().FindLatest(5, 0)
 
 	assert.NoError(t, err)
 	assert.Equal(t, len(messages), 2)
@@ -76,7 +76,7 @@ func TestMessagesRepository_Find_When_NoEntries_Exist(t *testing.T) {
 	s, teardown := store.TestStore(t, databaseUrl)
 	defer teardown("messages")
 
-	messages, err := s.Messages().Find(5, 0)
+	messages, err := s.Messages().FindLatest(5, 0)
 
 	assert.NoError(t, err)
 	assert.Equal(t, len(messages), 0)
@@ -96,7 +96,7 @@ func TestMessagesRepository_Update(t *testing.T) {
 	}
 	t.Log("Updated entries ", update)
 
-	messages, err := s.Messages().Find(5, 0)
+	messages, err := s.Messages().FindLatest(5, 0)
 
 	assert.NoError(t, err)
 	assert.Equal(t, len(messages), 2)
