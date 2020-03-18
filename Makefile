@@ -6,4 +6,4 @@ build:
 test:
 	go test -v -race -timeout 30s ./...
 
-.DEFAULT_GOAL := test
+.DEFAULT_GOAL := build
