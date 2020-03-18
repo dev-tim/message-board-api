@@ -1,8 +1,8 @@
-package store_test
+package sqlstore_test
 
 import (
 	"github.com/dev-tim/message-board-api/internal/app/model"
-	"github.com/dev-tim/message-board-api/internal/app/store"
+	"github.com/dev-tim/message-board-api/internal/app/store/sqlstore"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -31,7 +31,8 @@ var testMessages = []model.Message{
 }
 
 func TestMessagesRepository_Create(t *testing.T) {
-	s, teardown := store.TestStore(t, databaseUrl)
+	db, teardown := sqlstore.TestDB(t, databaseUrl)
+	s := sqlstore.New(db)
 	defer teardown("messages")
 
 	now := time.Now()
@@ -50,7 +51,8 @@ func TestMessagesRepository_Create(t *testing.T) {
 }
 
 func TestMessagesRepository_Find_When_2_EntriesExist(t *testing.T) {
-	s, teardown := store.TestStore(t, databaseUrl)
+	db, teardown := sqlstore.TestDB(t, databaseUrl)
+	s := sqlstore.New(db)
 	defer teardown("messages")
 
 	for _, m := range testMessages {
@@ -73,7 +75,8 @@ func TestMessagesRepository_Find_When_2_EntriesExist(t *testing.T) {
 }
 
 func TestMessagesRepository_Find_When_NoEntries_Exist(t *testing.T) {
-	s, teardown := store.TestStore(t, databaseUrl)
+	db, teardown := sqlstore.TestDB(t, databaseUrl)
+	s := sqlstore.New(db)
 	defer teardown("messages")
 
 	messages, err := s.Messages().FindLatest(5, 0)
@@ -83,7 +86,8 @@ func TestMessagesRepository_Find_When_NoEntries_Exist(t *testing.T) {
 }
 
 func TestMessagesRepository_Update(t *testing.T) {
-	s, teardown := store.TestStore(t, databaseUrl)
+	db, teardown := sqlstore.TestDB(t, databaseUrl)
+	s := sqlstore.New(db)
 	defer teardown("messages")
 
 	for _, m := range testMessages {

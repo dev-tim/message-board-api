@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"net/http"
+	"os"
 )
 
 var (
@@ -11,9 +12,15 @@ var (
 )
 
 func init() {
-	// read from env variable
-	username = "test"
-	password = "test"
+	username = os.Getenv("AUTH_USERNAME")
+	if username == "" {
+		username = "test"
+	}
+
+	password = os.Getenv("AUTH_PASSWORD")
+	if password == "" {
+		password = "test"
+	}
 }
 
 func BasicAuth(w http.ResponseWriter, r *http.Request, realm string) bool {

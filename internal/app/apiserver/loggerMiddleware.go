@@ -1,21 +1,10 @@
 package apiserver
 
 import (
-	"context"
 	"github.com/dev-tim/message-board-api/internal/app/common"
-	"github.com/google/uuid"
 	"net/http"
 	"time"
 )
-
-func contextMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestContext := context.WithValue(context.Background(), "requestId", uuid.New().String())
-		defer requestContext.Done()
-
-		next.ServeHTTP(w, r.Clone(requestContext))
-	})
-}
 
 type LoggingResponseWriter struct {
 	http.ResponseWriter
@@ -31,7 +20,7 @@ func (lrw *LoggingResponseWriter) WriteHeader(code int) {
 	lrw.ResponseWriter.WriteHeader(code)
 }
 
-func loggingMiddleware(next http.Handler) http.Handler {
+func LoggingMiddleware(next http.Handler) http.Handler {
 	logger := common.GetLogger()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

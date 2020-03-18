@@ -4,6 +4,8 @@ import (
 	"net/http"
 )
 
+// Here we can add also error code for clients to handle different types of errors
+// recoverable/unrecoverable for example
 type Error struct {
 	RequestId string
 	Message   string

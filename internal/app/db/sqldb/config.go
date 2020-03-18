@@ -1,4 +1,4 @@
-package store
+package sqldb
 
 type Config struct {
 	DbUrl                   string `toml:"db_url"`

@@ -13,6 +13,6 @@ func TestAPIServer_Health(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/health", nil)
-	s.handleHealth().ServeHTTP(rec, req)
+	s.HandleHealth().ServeHTTP(rec, req)
 	assert.Equal(t, rec.Body.String(), "{\"status\":\"OK\"}\n")
 }
