@@ -40,7 +40,33 @@ func (r *MessagesRepository) Create(m *model.Message) (*model.Message, error) {
 	return m, nil
 }
 
-func (r *MessagesRepository) Find(limit, offset uint) ([]model.Message, error) {
+func (r *MessagesRepository) FindById(id string) (*model.Message, error) {
+	logger := common.GetLogger()
+
+	timeout := 3 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	logger.Debug("Starting message select exec")
+	m := &model.Message{}
+	err := r.store.db.QueryRowContext(ctx, "SELECT * FROM messages WHERE id=$1", id).Scan(&m.Id,
+		&m.Name,
+		&m.Email,
+		&m.Text,
+		&m.CreationTime,
+		&m.CreatedAt,
+		&m.UpdatedAt)
+
+	if err != nil {
+		logger.Error("Failed to select message by id", id, err)
+		return nil, err
+	}
+
+	logger.Debug("Finished selecting message from db")
+	return m, nil
+}
+
+func (r *MessagesRepository) FindLatest(limit, offset int) ([]model.Message, error) {
 	logger := common.GetLogger()
 
 	timeout := 3 * time.Second
@@ -49,7 +75,7 @@ func (r *MessagesRepository) Find(limit, offset uint) ([]model.Message, error) {
 
 	logger.Debug("Starting message select exec")
 
-	rows, err := r.store.db.QueryContext(ctx, "SELECT * FROM messages LIMIT $1 OFFSET $2", limit, offset)
+	rows, err := r.store.db.QueryContext(ctx, "SELECT * FROM messages ORDER BY external_creation_time DESC LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
 		logger.Error("Failed to select messageList", err)
 		return nil, err

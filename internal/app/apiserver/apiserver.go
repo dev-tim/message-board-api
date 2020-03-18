@@ -1,10 +1,10 @@
 package apiserver
 
 import (
-	"encoding/json"
 	"github.com/dev-tim/message-board-api/internal/app/common"
 	"github.com/dev-tim/message-board-api/internal/app/store"
 	"github.com/gorilla/mux"
+	"github.com/urfave/negroni"
 	"net/http"
 )
 
@@ -39,7 +39,48 @@ func (s *APIServer) Start() error {
 }
 
 func (s *APIServer) configureRouter() {
+	s.router.Use(contextMiddleware)
+	s.router.Use(loggingMiddleware)
+
+	publicPrefix := "/public"
+	privatePrefix := "/private"
+
+	publicRouter := mux.NewRouter().PathPrefix(publicPrefix).Subrouter().StrictSlash(true)
+	privateRouter := mux.NewRouter().PathPrefix(privatePrefix).Subrouter().StrictSlash(true)
+
 	s.router.HandleFunc("/health", s.handleHealth())
+	privateRouter.HandleFunc("/v1/messages", s.handleGetPrivateMessages()).Methods(http.MethodGet)
+	privateRouter.HandleFunc("/v1/messages/{messageId}", s.handleGetPrivateSingleMessage()).Methods(http.MethodGet)
+	privateRouter.HandleFunc("/v1/messages", s.handlePostPrivateMessage()).Methods(http.MethodPost)
+	privateRouter.HandleFunc("/v1/messages/{messageId}", s.handleUpdatePrivateMessage()).Methods(http.MethodPatch)
+
+	privateRouter.HandleFunc("/v1/messages", s.handlePostPrivateMessage()).Methods(http.MethodPost)
+
+	n := negroni.New()
+	recovery := negroni.NewRecovery()
+	recovery.PanicHandlerFunc = func(panic *negroni.PanicInformation) {
+		common.GetLogger().Error("Caught panic", panic.RequestDescription(), panic.StackAsString())
+	}
+
+	s.router.PathPrefix(privatePrefix).Handler(negroni.New(
+		negroni.HandlerFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+			if BasicAuth(w, r, "Provide user name and password") {
+				next(w, r)
+			}
+		}),
+		negroni.Wrap(privateRouter),
+	))
+
+	s.router.PathPrefix(publicPrefix).Handler(negroni.New(
+		negroni.HandlerFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+			// TODO do rate limiting here
+			next(w, r)
+		}),
+		negroni.Wrap(publicRouter),
+	))
+
+	n.Use(recovery)
+	n.UseHandler(s.router)
 }
 
 func (s *APIServer) configureStore() error {
@@ -54,19 +95,4 @@ func (s *APIServer) configureStore() error {
 		return err
 	}
 	return nil
-}
-
-func (s *APIServer) handleHealth() http.HandlerFunc {
-
-	type HealthResponse struct {
-		Status string `json:"status"`
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		response := HealthResponse{
-			Status: "OK",
-		}
-
-		json.NewEncoder(w).Encode(response)
-	}
 }
