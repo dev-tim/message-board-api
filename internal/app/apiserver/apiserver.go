@@ -49,8 +49,12 @@ func (s *APIServer) configureRouter() {
 	privateRouter := mux.NewRouter().PathPrefix(privatePrefix).Subrouter().StrictSlash(true)
 
 	s.router.HandleFunc("/health", s.handleHealth())
-	privateRouter.HandleFunc("/v1/messages", s.handleGetPublicMessages())
-	publicRouter.HandleFunc("/v1/messages", s.handleGetPublicMessages())
+	privateRouter.HandleFunc("/v1/messages", s.handleGetPrivateMessages()).Methods(http.MethodGet)
+	privateRouter.HandleFunc("/v1/messages/{messageId}", s.handleGetPrivateSingleMessage()).Methods(http.MethodGet)
+	privateRouter.HandleFunc("/v1/messages", s.handlePostPrivateMessage()).Methods(http.MethodPost)
+	privateRouter.HandleFunc("/v1/messages/{messageId}", s.handleUpdatePrivateMessage()).Methods(http.MethodPatch)
+
+	privateRouter.HandleFunc("/v1/messages", s.handlePostPrivateMessage()).Methods(http.MethodPost)
 
 	n := negroni.New()
 	recovery := negroni.NewRecovery()

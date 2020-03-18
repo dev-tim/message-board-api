@@ -24,8 +24,7 @@ func BasicAuth(w http.ResponseWriter, r *http.Request, realm string) bool {
 
 	if !ok || hasValidPassword || hasValidUsername {
 		w.Header().Set("WWW-Authenticate", `Basic realm="`+realm+`"`)
-		w.WriteHeader(401)
-		json.NewEncoder(w).Encode(NewError(r, "Unauthorized"))
+		json.NewEncoder(w).Encode(NewError(w, r, 401, "Unauthorized"))
 
 		return false
 	}

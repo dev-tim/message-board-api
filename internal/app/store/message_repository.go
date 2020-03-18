@@ -40,7 +40,33 @@ func (r *MessagesRepository) Create(m *model.Message) (*model.Message, error) {
 	return m, nil
 }
 
-func (r *MessagesRepository) FindLatest(limit, offset *int) ([]model.Message, error) {
+func (r *MessagesRepository) FindById(id string) (*model.Message, error) {
+	logger := common.GetLogger()
+
+	timeout := 3 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	logger.Debug("Starting message select exec")
+	m := &model.Message{}
+	err := r.store.db.QueryRowContext(ctx, "SELECT * FROM messages WHERE id=$1", id).Scan(&m.Id,
+		&m.Name,
+		&m.Email,
+		&m.Text,
+		&m.CreationTime,
+		&m.CreatedAt,
+		&m.UpdatedAt)
+
+	if err != nil {
+		logger.Error("Failed to select message by id", id, err)
+		return nil, err
+	}
+
+	logger.Debug("Finished selecting message from db")
+	return m, nil
+}
+
+func (r *MessagesRepository) FindLatest(limit, offset int) ([]model.Message, error) {
 	logger := common.GetLogger()
 
 	timeout := 3 * time.Second

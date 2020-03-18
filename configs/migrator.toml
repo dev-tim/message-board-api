@@ -1,0 +1,7 @@
+[store]
+db_url="host=127.0.0.1 user=postgres password=guessme dbname=messages-db sslmode=disable"
+
+max_idle_connections=5
+max_open_connections=15
+
+aquire_connection_timeout_seconds=3
