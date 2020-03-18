@@ -2,50 +2,58 @@ package apiserver
 
 import (
 	"encoding/json"
+	"github.com/dev-tim/message-board-api/internal/app/common"
+	"github.com/dev-tim/message-board-api/internal/app/store"
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
 type APIServer struct {
 	name   string
 	config *Config
-	logger *logrus.Logger
 	router *mux.Router
+	store  *store.Store
 }
 
 func New(config *Config) *APIServer {
 	return &APIServer{
 		name:   "App",
 		config: config,
-		logger: logrus.New(),
 		router: mux.NewRouter(),
 	}
 }
 
 func (s *APIServer) Start() error {
-	if err := s.configureLogger(s.config); err != nil {
+	if _, err := common.NewLoggerFactory(s.config.Common); err != nil {
+		return err
+	}
+
+	if err := s.configureStore(); err != nil {
 		return err
 	}
 
 	s.configureRouter()
-	s.logger.Info("Started api server")
+	common.GetLogger().Info("Started api server")
 
 	return http.ListenAndServe(s.config.BindAddress, s.router)
 }
 
-func (s *APIServer) configureLogger(config *Config) error {
-	level, err := logrus.ParseLevel(config.LogLevel)
-	if err != nil {
+func (s *APIServer) configureRouter() {
+	s.router.HandleFunc("/health", s.handleHealth())
+}
+
+func (s *APIServer) configureStore() error {
+	st := store.New(s.config.Store)
+	if err := st.Open(); err != nil {
 		return err
 	}
 
-	s.logger.SetLevel(level)
-	return nil
-}
+	s.store = st
 
-func (s *APIServer) configureRouter() {
-	s.router.HandleFunc("/health", s.handleHealth())
+	if err := st.Migrate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *APIServer) handleHealth() http.HandlerFunc {
