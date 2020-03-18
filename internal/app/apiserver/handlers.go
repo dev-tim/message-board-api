@@ -1,6 +1,7 @@
 package apiserver
 
 import (
+	"database/sql"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -50,7 +51,9 @@ func (s *APIServer) handleGetPrivateSingleMessage() http.HandlerFunc {
 		vars := mux.Vars(r)
 		messages, err := s.store.Messages().FindById(vars["messageId"])
 
-		if err != nil {
+		if err == sql.ErrNoRows {
+			json.NewEncoder(w).Encode(NewError(w, r, 404, "No result found"))
+		} else if err != nil {
 			json.NewEncoder(w).Encode(NewError(w, r, 500, "Unable to fetch messages"))
 			return
 		}
@@ -86,7 +89,9 @@ func (s *APIServer) handleUpdatePrivateMessage() http.HandlerFunc {
 			json.NewEncoder(w).Encode(NewError(w, r, 400, "Unable to parse body"))
 		}
 
-		if updated, err := s.store.Messages().Update(vars["messageId"], patch.Text); err != nil {
+		if updated, err := s.store.Messages().Update(vars["messageId"], patch.Text); err != sql.ErrNoRows {
+			json.NewEncoder(w).Encode(NewError(w, r, 404, "Document not found"))
+		} else if err != nil {
 			json.NewEncoder(w).Encode(NewError(w, r, 500, "Unable to patch message"))
 		} else {
 			json.NewEncoder(w).Encode(updated)
