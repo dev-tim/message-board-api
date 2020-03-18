@@ -1,12 +1,11 @@
 package apiserver
 
 import (
-	"encoding/json"
 	"github.com/dev-tim/message-board-api/internal/app/common"
 	"github.com/dev-tim/message-board-api/internal/app/store"
 	"github.com/gorilla/mux"
+	"github.com/urfave/negroni"
 	"net/http"
-	"strconv"
 )
 
 type APIServer struct {
@@ -40,8 +39,44 @@ func (s *APIServer) Start() error {
 }
 
 func (s *APIServer) configureRouter() {
+	s.router.Use(contextMiddleware)
+	s.router.Use(loggingMiddleware)
+
+	publicPrefix := "/public"
+	privatePrefix := "/private"
+
+	publicRouter := mux.NewRouter().PathPrefix(publicPrefix).Subrouter().StrictSlash(true)
+	privateRouter := mux.NewRouter().PathPrefix(privatePrefix).Subrouter().StrictSlash(true)
+
 	s.router.HandleFunc("/health", s.handleHealth())
-	s.router.HandleFunc("/private/api/v1/messages", s.handleGetPublicMessages())
+	privateRouter.HandleFunc("/v1/messages", s.handleGetPublicMessages())
+	publicRouter.HandleFunc("/v1/messages", s.handleGetPublicMessages())
+
+	n := negroni.New()
+	recovery := negroni.NewRecovery()
+	recovery.PanicHandlerFunc = func(panic *negroni.PanicInformation) {
+		common.GetLogger().Error("Caught panic", panic.RequestDescription(), panic.StackAsString())
+	}
+
+	s.router.PathPrefix(privatePrefix).Handler(negroni.New(
+		negroni.HandlerFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+			if BasicAuth(w, r, "Provide user name and password") {
+				next(w, r)
+			}
+		}),
+		negroni.Wrap(privateRouter),
+	))
+
+	s.router.PathPrefix(publicPrefix).Handler(negroni.New(
+		negroni.HandlerFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+			// TODO do rate limiting here
+			next(w, r)
+		}),
+		negroni.Wrap(publicRouter),
+	))
+
+	n.Use(recovery)
+	n.UseHandler(s.router)
 }
 
 func (s *APIServer) configureStore() error {
@@ -56,64 +91,4 @@ func (s *APIServer) configureStore() error {
 		return err
 	}
 	return nil
-}
-
-func (s *APIServer) handleHealth() http.HandlerFunc {
-
-	type HealthResponse struct {
-		Status string `json:"status"`
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		response := HealthResponse{
-			Status: "OK",
-		}
-
-		json.NewEncoder(w).Encode(response)
-	}
-}
-
-func (s *APIServer) handleGetPublicMessages() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		limit, err := extractIntParam(r, "limit", 10)
-		if err != nil {
-			http.Error(w, "Invalid limit value", 400)
-			return
-		}
-
-		offset, err := extractIntParam(r, "offset", 10)
-		if err != nil {
-			http.Error(w, "Invalid offset value", 400)
-			return
-		}
-
-		messages, err := s.store.Messages().FindLatest(limit, offset)
-		if err != nil {
-			http.Error(w, "Unable to fetch messages", 500)
-			return
-		}
-
-		json.NewEncoder(w).Encode(messages)
-	}
-}
-
-func (s *APIServer) handlePostPublicMessage() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "Not implemented", 412)
-	}
-}
-
-func extractIntParam(r *http.Request, key string, defaultVal int) (*int, error) {
-	query := r.URL.Query()
-	val := query.Get(key)
-
-	if len(val) == 0 {
-		return &defaultVal, nil
-	}
-
-	if atoi, err := strconv.Atoi(val); err != nil {
-		return nil, err
-	} else {
-		return &atoi, nil
-	}
 }
