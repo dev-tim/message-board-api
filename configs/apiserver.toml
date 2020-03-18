@@ -1,6 +1,7 @@
+[api]
 bind_address = ":8080"
 
-[store]
+[sqlDb]
 db_url="host=127.0.0.1 user=postgres password=guessme dbname=messages-db sslmode=disable"
 
 max_idle_connections=5

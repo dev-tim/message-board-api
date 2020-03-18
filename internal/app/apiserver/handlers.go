@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func (s *APIServer) handleHealth() http.HandlerFunc {
+func (s *APIServer) HandleHealth() http.HandlerFunc {
 
 	type HealthResponse struct {
 		Status string `json:"status"`
@@ -22,7 +22,7 @@ func (s *APIServer) handleHealth() http.HandlerFunc {
 	}
 }
 
-func (s *APIServer) handleGetPrivateMessages() http.HandlerFunc {
+func (s *APIServer) HandleGetPrivateMessages() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit, err := extractIntParam(r, "limit", 10)
 		if err != nil {
@@ -46,7 +46,7 @@ func (s *APIServer) handleGetPrivateMessages() http.HandlerFunc {
 	}
 }
 
-func (s *APIServer) handleGetPrivateSingleMessage() http.HandlerFunc {
+func (s *APIServer) HandleGetPrivateSingleMessage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		messages, err := s.store.Messages().FindById(vars["messageId"])
@@ -62,7 +62,7 @@ func (s *APIServer) handleGetPrivateSingleMessage() http.HandlerFunc {
 	}
 }
 
-func (s *APIServer) handlePostPrivateMessage() http.HandlerFunc {
+func (s *APIServer) HandlePostPrivateMessage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var post CreateMessageBodyV1ClientRequest
 		err := json.NewDecoder(r.Body).Decode(post)
@@ -79,7 +79,7 @@ func (s *APIServer) handlePostPrivateMessage() http.HandlerFunc {
 	}
 }
 
-func (s *APIServer) handleUpdatePrivateMessage() http.HandlerFunc {
+func (s *APIServer) HandleUpdatePrivateMessage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 

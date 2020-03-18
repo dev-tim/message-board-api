@@ -1,33 +1,25 @@
-package migrator
+package importer
 
 import (
 	"github.com/dev-tim/message-board-api/internal/app"
-	"github.com/dev-tim/message-board-api/internal/app/common"
 	"github.com/dev-tim/message-board-api/internal/app/store"
+	"github.com/sirupsen/logrus"
 )
 
 type DataImporter struct {
-	name   string
-	config *Config
-	store  *store.Store
+	store  store.IStore
+	logger *logrus.Logger
 }
 
-func New(config *Config) *DataImporter {
+func New(store store.IStore, logger *logrus.Logger) *DataImporter {
 	return &DataImporter{
-		name:   "DataImporter",
-		config: config,
+		store:  store,
+		logger: logger,
 	}
 }
 
 func (s *DataImporter) Start() error {
-	if _, err := common.NewLoggerFactory(s.config.Common); err != nil {
-		return err
-	}
-	logger := common.GetLogger()
-
-	if err := s.configureStore(); err != nil {
-		return err
-	}
+	logger := s.logger
 
 	logger.Info("Started data importer")
 	messages, err := ReadCSVFromFile(app.RootDir() + "/messages.csv")
@@ -42,15 +34,5 @@ func (s *DataImporter) Start() error {
 		}
 	}
 
-	return nil
-}
-
-func (s *DataImporter) configureStore() error {
-	st := store.New(s.config.Store)
-	if err := st.Open(); err != nil {
-		return err
-	}
-
-	s.store = st
 	return nil
 }

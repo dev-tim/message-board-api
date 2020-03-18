@@ -1,4 +1,4 @@
-package store
+package sqlstore
 
 import (
 	"context"
@@ -66,7 +66,7 @@ func (r *MessagesRepository) FindById(id string) (*model.Message, error) {
 	return m, nil
 }
 
-func (r *MessagesRepository) FindLatest(limit, offset int) ([]model.Message, error) {
+func (r *MessagesRepository) FindLatest(limit, offset int) ([]*model.Message, error) {
 	logger := common.GetLogger()
 
 	timeout := 3 * time.Second
@@ -82,7 +82,7 @@ func (r *MessagesRepository) FindLatest(limit, offset int) ([]model.Message, err
 	}
 	defer rows.Close()
 
-	messageList := make([]model.Message, 0)
+	messageList := make([]*model.Message, 0)
 
 	for rows.Next() {
 		var m model.Message
@@ -95,7 +95,7 @@ func (r *MessagesRepository) FindLatest(limit, offset int) ([]model.Message, err
 			&m.UpdatedAt); err != nil {
 			logger.Error("Failed to parse message", err)
 		}
-		messageList = append(messageList, m)
+		messageList = append(messageList, &m)
 	}
 
 	rerr := rows.Close()

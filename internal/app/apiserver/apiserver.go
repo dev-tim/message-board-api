@@ -4,43 +4,37 @@ import (
 	"github.com/dev-tim/message-board-api/internal/app/common"
 	"github.com/dev-tim/message-board-api/internal/app/store"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/negroni"
 	"net/http"
 )
 
 type APIServer struct {
-	name   string
-	config *Config
 	router *mux.Router
-	store  *store.Store
+	logger *logrus.Logger
+	store  store.IStore
+	config *Config
 }
 
-func New(config *Config) *APIServer {
+func New(config *Config, store store.IStore, logger *logrus.Logger) *APIServer {
 	return &APIServer{
-		name:   "App",
-		config: config,
+		logger: logger,
 		router: mux.NewRouter(),
+		store:  store,
+		config: config,
 	}
 }
 
 func (s *APIServer) Start() error {
-	if _, err := common.NewLoggerFactory(s.config.Common); err != nil {
-		return err
-	}
-
-	if err := s.configureStore(); err != nil {
-		return err
-	}
-
 	s.configureRouter()
-	common.GetLogger().Info("Started api server")
+	s.logger.Info("Started api server")
 
 	return http.ListenAndServe(s.config.BindAddress, s.router)
 }
 
 func (s *APIServer) configureRouter() {
-	s.router.Use(contextMiddleware)
-	s.router.Use(loggingMiddleware)
+	s.router.Use(ContextMiddleware)
+	s.router.Use(LoggingMiddleware)
 
 	publicPrefix := "/public"
 	privatePrefix := "/private"
@@ -48,13 +42,13 @@ func (s *APIServer) configureRouter() {
 	publicRouter := mux.NewRouter().PathPrefix(publicPrefix).Subrouter().StrictSlash(true)
 	privateRouter := mux.NewRouter().PathPrefix(privatePrefix).Subrouter().StrictSlash(true)
 
-	s.router.HandleFunc("/health", s.handleHealth())
-	privateRouter.HandleFunc("/v1/messages", s.handleGetPrivateMessages()).Methods(http.MethodGet)
-	privateRouter.HandleFunc("/v1/messages/{messageId}", s.handleGetPrivateSingleMessage()).Methods(http.MethodGet)
-	privateRouter.HandleFunc("/v1/messages", s.handlePostPrivateMessage()).Methods(http.MethodPost)
-	privateRouter.HandleFunc("/v1/messages/{messageId}", s.handleUpdatePrivateMessage()).Methods(http.MethodPatch)
+	s.router.HandleFunc("/health", s.HandleHealth())
+	privateRouter.HandleFunc("/v1/messages", s.HandleGetPrivateMessages()).Methods(http.MethodGet)
+	privateRouter.HandleFunc("/v1/messages/{messageId}", s.HandleGetPrivateSingleMessage()).Methods(http.MethodGet)
+	privateRouter.HandleFunc("/v1/messages", s.HandlePostPrivateMessage()).Methods(http.MethodPost)
+	privateRouter.HandleFunc("/v1/messages/{messageId}", s.HandleUpdatePrivateMessage()).Methods(http.MethodPatch)
 
-	privateRouter.HandleFunc("/v1/messages", s.handlePostPrivateMessage()).Methods(http.MethodPost)
+	privateRouter.HandleFunc("/v1/messages", s.HandlePostPrivateMessage()).Methods(http.MethodPost)
 
 	n := negroni.New()
 	recovery := negroni.NewRecovery()
@@ -81,18 +75,4 @@ func (s *APIServer) configureRouter() {
 
 	n.Use(recovery)
 	n.UseHandler(s.router)
-}
-
-func (s *APIServer) configureStore() error {
-	st := store.New(s.config.Store)
-	if err := st.Open(); err != nil {
-		return err
-	}
-
-	s.store = st
-
-	if err := st.Migrate(); err != nil {
-		return err
-	}
-	return nil
 }
