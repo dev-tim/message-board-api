@@ -2,11 +2,11 @@ package sqldb
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/dev-tim/message-board-api/internal/app"
 	"github.com/dev-tim/message-board-api/internal/app/common"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -38,16 +38,16 @@ func Open(config *Config) (*sql.DB, error) {
 	return db, nil
 }
 
-func Migrate(db *sql.DB, config *Config) error {
-	logger := common.GetLogger()
+func Migrate(db *sql.DB, config *Config, logger *logrus.Logger) error {
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		logger.Error("Failed to get db instance for migration", err)
 	}
 
+	logger.Error("Root ", app.RootDir())
+
 	s2 := "file://" + app.RootDir() + "/db/migrations"
-	fmt.Println("Fff " + s2)
 	m, err := migrate.NewWithDatabaseInstance(
 		s2,
 		"messages", driver)

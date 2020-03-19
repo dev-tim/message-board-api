@@ -2,7 +2,6 @@ package sqlstore
 
 import (
 	"context"
-	"github.com/dev-tim/message-board-api/internal/app/common"
 	"github.com/dev-tim/message-board-api/internal/app/model"
 	"time"
 )
@@ -18,7 +17,7 @@ func NewMessageRepository(store *Store) *MessagesRepository {
 }
 
 func (r *MessagesRepository) Create(m *model.Message) (*model.Message, error) {
-	logger := common.GetLogger()
+	logger := r.store.logger
 
 	timeout := 3 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -41,7 +40,7 @@ func (r *MessagesRepository) Create(m *model.Message) (*model.Message, error) {
 }
 
 func (r *MessagesRepository) FindById(id string) (*model.Message, error) {
-	logger := common.GetLogger()
+	logger := r.store.logger
 
 	timeout := 3 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -67,7 +66,7 @@ func (r *MessagesRepository) FindById(id string) (*model.Message, error) {
 }
 
 func (r *MessagesRepository) FindLatest(limit, offset int) ([]*model.Message, error) {
-	logger := common.GetLogger()
+	logger := r.store.logger
 
 	timeout := 3 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -108,7 +107,7 @@ func (r *MessagesRepository) FindLatest(limit, offset int) ([]*model.Message, er
 }
 
 func (r *MessagesRepository) Update(id, text string) (*int64, error) {
-	logger := common.GetLogger()
+	logger := r.store.logger
 
 	timeout := 3 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)

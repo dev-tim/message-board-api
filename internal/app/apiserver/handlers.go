@@ -3,6 +3,7 @@ package apiserver
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -22,7 +23,7 @@ func (s *APIServer) HandleHealth() http.HandlerFunc {
 	}
 }
 
-func (s *APIServer) HandleGetPrivateMessages() http.HandlerFunc {
+func (s *APIServer) HandleGetMessages() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit, err := extractIntParam(r, "limit", 10)
 		if err != nil {
@@ -46,7 +47,7 @@ func (s *APIServer) HandleGetPrivateMessages() http.HandlerFunc {
 	}
 }
 
-func (s *APIServer) HandleGetPrivateSingleMessage() http.HandlerFunc {
+func (s *APIServer) HandleGetSingleMessage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		messages, err := s.store.Messages().FindById(vars["messageId"])
@@ -62,11 +63,13 @@ func (s *APIServer) HandleGetPrivateSingleMessage() http.HandlerFunc {
 	}
 }
 
-func (s *APIServer) HandlePostPrivateMessage() http.HandlerFunc {
+func (s *APIServer) HandlePostMessage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var post CreateMessageBodyV1ClientRequest
-		err := json.NewDecoder(r.Body).Decode(post)
+
+		err := json.NewDecoder(r.Body).Decode(&post)
 		if err != nil {
+			fmt.Println(err)
 			json.NewEncoder(w).Encode(NewError(w, r, 400, "Unable to parse body"))
 		}
 
@@ -74,22 +77,23 @@ func (s *APIServer) HandlePostPrivateMessage() http.HandlerFunc {
 		if created, err := s.store.Messages().Create(message); err != nil {
 			json.NewEncoder(w).Encode(NewError(w, r, 500, "Unable to store message"))
 		} else {
+			w.WriteHeader(201)
 			json.NewEncoder(w).Encode(created)
 		}
 	}
 }
 
-func (s *APIServer) HandleUpdatePrivateMessage() http.HandlerFunc {
+func (s *APIServer) HandleUpdateMessage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
 		var patch PatchMessageBodyV1ClientRequest
-		err := json.NewDecoder(r.Body).Decode(patch)
+		err := json.NewDecoder(r.Body).Decode(&patch)
 		if err != nil {
 			json.NewEncoder(w).Encode(NewError(w, r, 400, "Unable to parse body"))
 		}
 
-		if updated, err := s.store.Messages().Update(vars["messageId"], patch.Text); err != sql.ErrNoRows {
+		if updated, err := s.store.Messages().Update(vars["messageId"], patch.Text); err == sql.ErrNoRows {
 			json.NewEncoder(w).Encode(NewError(w, r, 404, "Document not found"))
 		} else if err != nil {
 			json.NewEncoder(w).Encode(NewError(w, r, 500, "Unable to patch message"))

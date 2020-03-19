@@ -17,7 +17,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&configPath, "config-path", "configs/importer.toml", "Data importer config path")
+	flag.StringVar(&configPath, "config-path", "configs/migrator.toml", "Data importer config path")
 }
 
 func main() {
@@ -37,8 +37,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Unable to open db", err)
 	}
+	defer db.Close()
 
-	s := sqlstore.New(db)
+	s := sqlstore.New(db, common.GetLogger())
 	im := importer.New(s, common.GetLogger())
 	if err := im.Start(); err != nil {
 		log.Fatal("Unable to import records", err)
@@ -52,9 +53,8 @@ func ProvideDB(err error, config *Config) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
-	if err := sqldb.Migrate(db, config.SqlDb); err != nil {
+	if err := sqldb.Migrate(db, config.SqlDb, common.GetLogger()); err != nil {
 		return nil, err
 	}
 

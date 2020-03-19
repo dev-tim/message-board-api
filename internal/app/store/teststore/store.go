@@ -13,5 +13,9 @@ func New() *Store {
 }
 
 func (s *Store) Messages() store.IMessagesRepository {
-	return NewMessageRepository(s)
+	if s.messagesRepository == nil {
+		s.messagesRepository = NewMessageRepository(s)
+	}
+
+	return s.messagesRepository
 }

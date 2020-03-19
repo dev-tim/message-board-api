@@ -1,0 +1,38 @@
+version: '3.5'
+
+services:
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: guessme
+      PGDATA: /data/postgres
+      POSTGRES_DB: messages-db
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+  data-imoprter:
+    build: .
+    environment:
+      AUTH_USERNAME: admin
+      AUTH_PASSWORD: back-challenge
+    command: ["/app/wait-for-it.sh", "postgres:5432", "--", "/app/data-migrator"]
+#    command: tail -F anything
+    depends_on:
+      - postgres
+    links:
+      - postgres
+  app:
+    build: .
+    environment:
+      AUTH_USERNAME: admin
+      AUTH_PASSWORD: back-challenge
+    command: ["/app/wait-for-it.sh", "postgres:5432", "--", "/app/apiserver"]
+#    command: tail -F anything
+    depends_on:
+      - data-imoprter
+      - postgres
+    links:
+      - postgres
+    ports:
+      - "8080:8080"

@@ -3,6 +3,8 @@ package sqlstore
 import (
 	"database/sql"
 	"fmt"
+	"github.com/dev-tim/message-board-api/internal/app/db/sqldb"
+	"github.com/sirupsen/logrus/hooks/test"
 	"strings"
 	"testing"
 )
@@ -16,6 +18,14 @@ func TestDB(t *testing.T, databaseUrl string) (*sql.DB, func(...string)) {
 	}
 
 	if err := db.Ping(); err != nil {
+		t.Fatal(err)
+	}
+
+	logger, _ := test.NewNullLogger()
+	if err := sqldb.Migrate(db, &sqldb.Config{
+		DbUrl:          databaseUrl,
+		CurrentVersion: 1,
+	}, logger); err != nil {
 		t.Fatal(err)
 	}
 
