@@ -45,6 +45,8 @@ func Migrate(db *sql.DB, config *Config, logger *logrus.Logger) error {
 		logger.Error("Failed to get db instance for migration", err)
 	}
 
+	logger.Error("Root ", app.RootDir())
+
 	s2 := "file://" + app.RootDir() + "/db/migrations"
 	m, err := migrate.NewWithDatabaseInstance(
 		s2,
