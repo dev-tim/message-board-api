@@ -38,7 +38,7 @@ func main() {
 		log.Fatal("Unable to open db", err)
 	}
 
-	s := sqlstore.New(db)
+	s := sqlstore.New(db, common.GetLogger())
 	im := importer.New(s, common.GetLogger())
 	if err := im.Start(); err != nil {
 		log.Fatal("Unable to import records", err)
@@ -54,7 +54,7 @@ func ProvideDB(err error, config *Config) (*sql.DB, error) {
 	}
 	defer db.Close()
 
-	if err := sqldb.Migrate(db, config.SqlDb); err != nil {
+	if err := sqldb.Migrate(db, config.SqlDb, common.GetLogger()); err != nil {
 		return nil, err
 	}
 

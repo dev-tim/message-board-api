@@ -38,7 +38,7 @@ func main() {
 	}
 	defer db.Close()
 
-	store := sqlstore.New(db)
+	store := sqlstore.New(db, common.GetLogger())
 
 	server := apiserver.New(config.Api, store, common.GetLogger())
 	if err := server.Start(); err != nil {
@@ -52,7 +52,7 @@ func ProvideDB(err error, config *Config) (*sql.DB, error) {
 		return nil, err
 	}
 
-	if err := sqldb.Migrate(db, config.SqlDb); err != nil {
+	if err := sqldb.Migrate(db, config.SqlDb, common.GetLogger()); err != nil {
 		return nil, err
 	}
 

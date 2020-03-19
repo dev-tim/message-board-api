@@ -32,7 +32,7 @@ func (s *MessagesRepository) FindById(id string) (*model.Message, error) {
 }
 
 func (s *MessagesRepository) FindLatest(limit, offset int) ([]*model.Message, error) {
-	vals := make([]*model.Message, len(s.messages))
+	vals := make([]*model.Message, 0)
 
 	for _, v := range s.messages {
 		vals = append(vals, v)

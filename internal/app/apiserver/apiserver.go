@@ -10,7 +10,7 @@ import (
 )
 
 type APIServer struct {
-	router *mux.Router
+	Router *mux.Router
 	logger *logrus.Logger
 	store  store.IStore
 	config *Config
@@ -19,22 +19,22 @@ type APIServer struct {
 func New(config *Config, store store.IStore, logger *logrus.Logger) *APIServer {
 	return &APIServer{
 		logger: logger,
-		router: mux.NewRouter(),
+		Router: mux.NewRouter(),
 		store:  store,
 		config: config,
 	}
 }
 
 func (s *APIServer) Start() error {
-	s.configureRouter()
+	s.ConfigureRouter()
 	s.logger.Info("Started api server")
 
-	return http.ListenAndServe(s.config.BindAddress, s.router)
+	return http.ListenAndServe(s.config.BindAddress, s.Router)
 }
 
-func (s *APIServer) configureRouter() {
-	s.router.Use(ContextMiddleware)
-	s.router.Use(LoggingMiddleware)
+func (s *APIServer) ConfigureRouter() {
+	s.Router.Use(ContextMiddleware)
+	s.Router.Use(LoggingMiddleware(s.logger))
 
 	publicPrefix := "/public"
 	privatePrefix := "/private"
@@ -42,13 +42,13 @@ func (s *APIServer) configureRouter() {
 	publicRouter := mux.NewRouter().PathPrefix(publicPrefix).Subrouter().StrictSlash(true)
 	privateRouter := mux.NewRouter().PathPrefix(privatePrefix).Subrouter().StrictSlash(true)
 
-	s.router.HandleFunc("/health", s.HandleHealth())
-	privateRouter.HandleFunc("/v1/messages", s.HandleGetPrivateMessages()).Methods(http.MethodGet)
-	privateRouter.HandleFunc("/v1/messages/{messageId}", s.HandleGetPrivateSingleMessage()).Methods(http.MethodGet)
-	privateRouter.HandleFunc("/v1/messages", s.HandlePostPrivateMessage()).Methods(http.MethodPost)
-	privateRouter.HandleFunc("/v1/messages/{messageId}", s.HandleUpdatePrivateMessage()).Methods(http.MethodPatch)
+	s.Router.HandleFunc("/health", s.HandleHealth())
+	privateRouter.HandleFunc("/v1/messages", s.HandleGetMessages()).Methods(http.MethodGet)
+	privateRouter.HandleFunc("/v1/messages/{messageId}", s.HandleGetSingleMessage()).Methods(http.MethodGet)
+	privateRouter.HandleFunc("/v1/messages", s.HandlePostMessage()).Methods(http.MethodPost)
+	privateRouter.HandleFunc("/v1/messages/{messageId}", s.HandleUpdateMessage()).Methods(http.MethodPatch)
 
-	privateRouter.HandleFunc("/v1/messages", s.HandlePostPrivateMessage()).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/v1/messages", s.HandlePostMessage()).Methods(http.MethodPost)
 
 	n := negroni.New()
 	recovery := negroni.NewRecovery()
@@ -56,7 +56,7 @@ func (s *APIServer) configureRouter() {
 		common.GetLogger().Error("Caught panic", panic.RequestDescription(), panic.StackAsString())
 	}
 
-	s.router.PathPrefix(privatePrefix).Handler(negroni.New(
+	s.Router.PathPrefix(privatePrefix).Handler(negroni.New(
 		negroni.HandlerFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 			if BasicAuth(w, r, "Provide user name and password") {
 				next(w, r)
@@ -65,7 +65,7 @@ func (s *APIServer) configureRouter() {
 		negroni.Wrap(privateRouter),
 	))
 
-	s.router.PathPrefix(publicPrefix).Handler(negroni.New(
+	s.Router.PathPrefix(publicPrefix).Handler(negroni.New(
 		negroni.HandlerFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 			// TODO do rate limiting here
 			next(w, r)
@@ -74,5 +74,5 @@ func (s *APIServer) configureRouter() {
 	))
 
 	n.Use(recovery)
-	n.UseHandler(s.router)
+	n.UseHandler(s.Router)
 }
